@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EudaiPic - Pro Image Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex items-center justify-center p-6">
+
+    <div class="max-w-xl w-full bg-slate-800 rounded-3xl shadow-2xl p-8 border border-slate-700">
+        <h1 class="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            EudaiPic
+        </h1>
+        <p class="text-slate-400 text-center mb-8 text-sm">Satu tempat untuk Kompres & Hapus Latar Belakang.</p>
+
+        <div class="mb-6">
+            <label class="block mb-2 text-sm font-medium text-slate-300">Pilih Gambar</label>
+            <input type="file" id="imageInput" accept="image/jpeg, image/png, image/webp" 
+                class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer bg-slate-700 rounded-lg border border-slate-600 focus:outline-none">
+        </div>
+
+        <div class="space-y-6 mb-8">
+            <div>
+                <div class="flex justify-between mb-2">
+                    <label class="text-sm font-medium text-slate-300">Kualitas Kompresi</label>
+                    <span id="qualityValue" class="text-emerald-400 font-bold">80%</span>
+                </div>
+                <input type="range" id="qualitySlider" min="10" max="100" value="80" 
+                    class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button id="compressBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-lg flex justify-center items-center gap-2 text-sm">
+                <span>Kompres</span>
+                <span id="loaderCompress" class="hidden animate-spin border-2 border-white border-t-transparent rounded-full h-4 w-4"></span>
+            </button>
+            
+            <button id="removeBgBtn" class="w-full bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-lg flex justify-center items-center gap-2 text-sm">
+                <span>Hapus BG</span>
+                <span id="loaderBg" class="hidden animate-spin border-2 border-white border-t-transparent rounded-full h-4 w-4"></span>
+            </button>
+        </div>
+
+        <div id="resultArea" class="mt-8 pt-8 border-t border-slate-700 hidden text-center">
+            <p class="text-sm text-slate-400 mb-4" id="resultText">Hasil EudaiPic:</p>
+            <div class="flex flex-col items-center gap-4">
+                <img id="previewImage" class="max-h-48 rounded-lg shadow-md border border-slate-600 bg-checkered">
+                <div class="text-xs text-slate-300" id="sizeInfo">
+                    Ukuran: <span id="newSize" class="text-emerald-400 font-bold text-lg ml-1"></span>
+                </div>
+                <a id="downloadBtn" class="bg-slate-700 hover:bg-slate-600 border border-slate-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition-colors">Unduh Hasil</a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .bg-checkered {
+            background-image: linear-gradient(45deg, #334155 25%, transparent 25%), linear-gradient(-45deg, #334155 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #334155 75%), linear-gradient(-45deg, transparent 75%, #334155 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+    </style>
+
+    <script>
+        // MASUKKAN API KEY KANG MAS DI SINI ↓↓↓
+        const REMOVE_BG_API_KEY = "sini"; 
+
+        const slider = document.getElementById('qualitySlider');
+        const qualityVal = document.getElementById('qualityValue');
+        const compressBtn = document.getElementById('compressBtn');
+        const removeBgBtn = document.getElementById('removeBgBtn');
+        const imageInput = document.getElementById('imageInput');
+        const resultArea = document.getElementById('resultArea');
+
+        slider.oninput = function() { qualityVal.innerHTML = this.value + "%"; }
+
+        // --- FUNGSI KOMPRES (TETAP PAKAI NODE.JS KITA) ---
+        compressBtn.onclick = async () => {
+            const file = imageInput.files[0];
+            if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
+
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('quality', slider.value);
+
+            toggleLoading(compressBtn, 'loaderCompress', true);
+
+            try {
+                const response = await fetch('/api/compress', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('Gagal kompresi');
+
+                const imageBlob = await response.blob();
+                tampilkanHasil(imageBlob, `EudaiPic_Compress_${file.name}`, 'Hasil Kompresi EudaiPic');
+            } catch (error) {
+                alert("Maaf Kang Mas, kompresi gagal.");
+            } finally {
+                toggleLoading(compressBtn, 'loaderCompress', false);
+            }
+        }
+
+        // --- FUNGSI HAPUS BACKGROUND (PAKAI API REMOVE.BG) ---
+       // --- FUNGSI HAPUS BACKGROUND (VERSI AMAN) ---
+        removeBgBtn.onclick = async () => {
+            const file = imageInput.files[0];
+            if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
+
+            // Kita buat form data yang cocok dengan sistem backend kita
+            const formData = new FormData();
+            formData.append('image', file);
+
+            toggleLoading(removeBgBtn, 'loaderBg', true);
+
+            try {
+                // Tembak langsung ke server internal kita, bukan ke remove.bg lagi
+                const response = await fetch('/api/removebg', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Gagal Hapus BG di Server');
+                
+                const imageBlob = await response.blob();
+                tampilkanHasil(imageBlob, `EudaiPic_NoBG_${file.name.split('.')[0]}.png`, 'Hasil Hapus Background');
+            } catch (error) {
+                console.error(error);
+                alert("Waduh, gagal memproses dari server internal kita.");
+            } finally {
+                toggleLoading(removeBgBtn, 'loaderBg', false);
+            }
+        }
+            const file = imageInput.files[0];
+            if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
+            if (REMOVE_BG_API_KEY === "TARUH_API_KEY_DI_SINI") {
+                return alert("API Key belum dimasukkan ke dalam kode HTML, Kang Mas!");
+            }
+
+            const formData = new FormData();
+            formData.append('image_file', file);
+            formData.append('size', 'auto');
+
+            toggleLoading(removeBgBtn, 'loaderBg', true);
+
+            try {
+                const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+                    method: 'POST',
+                    headers: { 'X-Api-Key': REMOVE_BG_API_KEY },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Detail Error Remove.bg:", errorData);
+                    throw new Error(errorData.errors[0].title || 'Gagal Hapus BG');
+                }
+                
+                const imageBlob = await response.blob();
+                tampilkanHasil(imageBlob, `EudaiPic_NoBG_${file.name.split('.')[0]}.png`, 'Hasil Hapus Background');
+            } catch (error) {
+                console.error(error);
+                alert("Waduh, gagal memproses. Pastikan internet jalan dan API key benar.");
+            } finally {
+                toggleLoading(removeBgBtn, 'loaderBg', false);
+            }
+        
+
+        // --- FUNGSI BANTUAN ---
+        function toggleLoading(btn, loaderId, isLoading) {
+            btn.disabled = isLoading;
+            document.getElementById(loaderId).classList.toggle('hidden', !isLoading);
+            compressBtn.disabled = isLoading;
+            removeBgBtn.disabled = isLoading;
+        }
+
+        function tampilkanHasil(blob, filename, title) {
+            document.getElementById('resultText').innerText = title;
+            document.getElementById('newSize').innerText = (blob.size / 1024).toFixed(2) + " KB";
+            
+            const previewUrl = URL.createObjectURL(blob);
+            document.getElementById('previewImage').src = previewUrl;
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.href = previewUrl;
+            downloadBtn.download = filename;
+
+            resultArea.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
