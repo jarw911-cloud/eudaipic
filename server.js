@@ -63,6 +63,12 @@ app.post('/api/removebg', upload.single('image'), async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`🚀 EudaiPic Server berjalan aman di port ${port}`);
-});
+// Kalau jalan di laptop sendiri (lokal), mesinnya menyala terus
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`🚀 EudaiPic Server berjalan aman di port ${port}`);
+    });
+}
+
+// Kalau di Vercel, kita serahkan mesinnya ke sistem mereka
+module.exports = app;
