@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EudaiPic - Pro Image Tools</title>
@@ -66,9 +65,6 @@
     </style>
 
     <script>
-        // MASUKKAN API KEY KANG MAS DI SINI ↓↓↓
-        const REMOVE_BG_API_KEY = "sini"; 
-
         const slider = document.getElementById('qualitySlider');
         const qualityVal = document.getElementById('qualityValue');
         const compressBtn = document.getElementById('compressBtn');
@@ -78,7 +74,7 @@
 
         slider.oninput = function() { qualityVal.innerHTML = this.value + "%"; }
 
-        // --- FUNGSI KOMPRES (TETAP PAKAI NODE.JS KITA) ---
+        // --- FUNGSI KOMPRES ---
         compressBtn.onclick = async () => {
             const file = imageInput.files[0];
             if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
@@ -102,20 +98,18 @@
             }
         }
 
-        // --- FUNGSI HAPUS BACKGROUND (PAKAI API REMOVE.BG) ---
-       // --- FUNGSI HAPUS BACKGROUND (VERSI AMAN) ---
+        // --- FUNGSI HAPUS BACKGROUND (VERSI AMAN VIA BACKEND) ---
         removeBgBtn.onclick = async () => {
             const file = imageInput.files[0];
             if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
 
-            // Kita buat form data yang cocok dengan sistem backend kita
             const formData = new FormData();
             formData.append('image', file);
 
             toggleLoading(removeBgBtn, 'loaderBg', true);
 
             try {
-                // Tembak langsung ke server internal kita, bukan ke remove.bg lagi
+                // Langsung menghubungi server EudaiPic buatan kita sendiri
                 const response = await fetch('/api/removebg', {
                     method: 'POST',
                     body: formData
@@ -132,40 +126,6 @@
                 toggleLoading(removeBgBtn, 'loaderBg', false);
             }
         }
-            const file = imageInput.files[0];
-            if (!file) return alert("Pilih gambarnya dulu ya, Kang Mas!");
-            if (REMOVE_BG_API_KEY === "TARUH_API_KEY_DI_SINI") {
-                return alert("API Key belum dimasukkan ke dalam kode HTML, Kang Mas!");
-            }
-
-            const formData = new FormData();
-            formData.append('image_file', file);
-            formData.append('size', 'auto');
-
-            toggleLoading(removeBgBtn, 'loaderBg', true);
-
-            try {
-                const response = await fetch('https://api.remove.bg/v1.0/removebg', {
-                    method: 'POST',
-                    headers: { 'X-Api-Key': REMOVE_BG_API_KEY },
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error("Detail Error Remove.bg:", errorData);
-                    throw new Error(errorData.errors[0].title || 'Gagal Hapus BG');
-                }
-                
-                const imageBlob = await response.blob();
-                tampilkanHasil(imageBlob, `EudaiPic_NoBG_${file.name.split('.')[0]}.png`, 'Hasil Hapus Background');
-            } catch (error) {
-                console.error(error);
-                alert("Waduh, gagal memproses. Pastikan internet jalan dan API key benar.");
-            } finally {
-                toggleLoading(removeBgBtn, 'loaderBg', false);
-            }
-        
 
         // --- FUNGSI BANTUAN ---
         function toggleLoading(btn, loaderId, isLoading) {
